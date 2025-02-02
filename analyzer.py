@@ -22,7 +22,16 @@ def calculate_flip_opportunities(market_data, popular_items):
     SETUP_FEE = 0.025  # 2.5% setup fee on both buy and sell orders
     PREMIUM_TAX = 0.04  # 4% premium tax on sell orders only
     PRICE_ADJUSTMENTS = 1  # Number of times we expect to adjust order prices
-    VOLUME_CAPTURE = 0.10  # Assume we can capture 10% of daily volume
+    VOLUME_CAPTURE = 0.02  # Assume we can capture 2% of daily volume with one order
+    
+    # Quality-based volume distribution (percentage of total volume)
+    QUALITY_VOLUME_DISTRIBUTION = {
+        1: 1.0,    # Normal quality gets full volume
+        2: 0.40,   # 40% of total volume
+        3: 0.30,   # 25% of total volume
+        4: 0.30,   # 10% of total volume
+        5: 0.01    # 5% of total volume
+    }
     
     opportunities = {}
     
@@ -45,9 +54,15 @@ def calculate_flip_opportunities(market_data, popular_items):
             # Get quality from the record
             quality = record.get("quality", 0)
 
-            # Calculate actual volume we expect to flip
+            # Calculate quality-adjusted volume
             daily_volume = round(item.get("volume", 0))
-            expected_volume = round(daily_volume * VOLUME_CAPTURE)
+            
+            # Apply quality-based volume adjustment
+            quality_multiplier = QUALITY_VOLUME_DISTRIBUTION.get(quality, 0)
+            quality_adjusted_volume = round(daily_volume * quality_multiplier)
+            
+            # Then apply standard volume capture
+            expected_volume = round(quality_adjusted_volume * VOLUME_CAPTURE)
 
             # Calculate base prices
             buy_price = round(record["buy_price_max"])

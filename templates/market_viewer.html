@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Market Opportunities Viewer</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #f2f2f2; }
+        .editable { background-color: #fff3e0; cursor: pointer; }
+        .city-section { margin-bottom: 2em; }
+        
+        /* Hover and selection styles */
+        tr:hover { background-color: #f5f5f5; }
+        tr.selected { background-color: #e3f2fd; }
+        
+        /* Delete button style */
+        .delete-btn {
+            color: red;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+        }
+        .delete-btn:hover {
+            background-color: #ffebee;
+        }
+
+        /* Percentage field styles */
+        .percentage-cell {
+            transition: background-color 0.3s;
+        }
+    </style>
+</head>
+<body>
+    {% for city, items in data.items() %}
+    <div class="city-section">
+        <h2>{{ city }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Delete</th>
+                    <th>Item Name</th>
+                    <th>Quality</th>
+                    <th>Buy@</th>
+                    <th>Sell@</th>
+                    <th>Avg@</th>
+                    <th>B/Avg%</th>
+                    <th>S/Avg%</th>
+                    <th>Margin</th>
+                    <th>Volume</th>
+                    <th>Max Adj</th>
+                    <th>ROI %</th>
+                    <th>Profit/day</th>
+                    <th>Investment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr data-city="{{ city }}" data-index="{{ loop.index0 }}">
+                    <td class="delete-btn">×</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quality }}</td>
+                    <td class="editable" data-field="buy_price">{{ item.buy_price }}</td>
+                    <td class="editable" data-field="sell_price">{{ item.sell_price }}</td>
+                    <td>{{ item.average_price }}</td>
+                    <td class="percentage-cell">{{ item.buy_price_ratio }}%</td>
+                    <td class="percentage-cell">{{ item.sell_price_ratio }}%</td>
+                    <td>{{ item.flip_margin }}</td>
+                    <td>{{ item.expected_volume }}</td>
+                    <td>{{ item.max_adjustments }}</td>
+                    <td class="percentage-cell">{{ item.roi_percent }}%</td>
+                    <td>{{ item.potential_profit }}</td>
+                    <td>{{ item.total_investment }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+    <script>
+        function getColorForPercentage(percent, type) {
+            let normalized;
+            
+            if (type === 'buy') {
+                // For buy ratio, negative is good (below average price)
+                if (percent <= 0) {
+                    // 0 to -100: white to green
+                    normalized = Math.min(-percent, 100) / 100;
+                    return `rgba(${255 * (1 - normalized)}, 255, ${255 * (1 - normalized)}, 0.2)`;
+                } else {
+                    // 0 to 100: white to red
+                    normalized = Math.min(percent, 100) / 100;
+                    return `rgba(255, ${255 * (1 - normalized)}, ${255 * (1 - normalized)}, 0.2)`;
+                }
+            } else {
+                // For sell ratio and ROI
+                if (percent >= 0) {
+                    // 0 to 100: white to green
+                    normalized = Math.min(percent, 100) / 100;
+                    return `rgba(${255 * (1 - normalized)}, 255, ${255 * (1 - normalized)}, 0.2)`;
+                } else {
+                    // 0 to -100: white to red
+                    normalized = Math.min(-percent, 100) / 100;
+                    return `rgba(255, ${255 * (1 - normalized)}, ${255 * (1 - normalized)}, 0.2)`;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const editableCells = document.querySelectorAll('.editable');
+            const rows = document.querySelectorAll('tr[data-city]');
+            
+            // Initial color application
+            function applyPercentageColors() {
+                rows.forEach(row => {
+                    // B/Avg%
+                    const buyAvgCell = row.cells[6];
+                    const buyAvgPercent = parseFloat(buyAvgCell.textContent);
+                    buyAvgCell.style.backgroundColor = getColorForPercentage(buyAvgPercent, 'buy');
+                    
+                    // S/Avg%
+                    const sellAvgCell = row.cells[7];
+                    const sellAvgPercent = parseFloat(sellAvgCell.textContent);
+                    sellAvgCell.style.backgroundColor = getColorForPercentage(sellAvgPercent, 'sell');
+                    
+                    // ROI%
+                    const roiCell = row.cells[11];
+                    const roiPercent = parseFloat(roiCell.textContent);
+                    roiCell.style.backgroundColor = getColorForPercentage(roiPercent, 'roi');
+                });
+            }
+            
+            applyPercentageColors();
+            
+            // Row selection handling
+            rows.forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't select row if clicking on editable cell or delete button
+                    if (!e.target.classList.contains('editable') && 
+                        !e.target.classList.contains('delete-btn')) {
+                        // Remove selection from all rows
+                        rows.forEach(r => r.classList.remove('selected'));
+                        // Add selection to clicked row
+                        row.classList.add('selected');
+                    }
+                });
+            });
+            
+            // Delete button handling
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const row = this.parentElement;
+                    row.remove();
+                });
+            });
+            
+            // Editable cells handling
+            editableCells.forEach(cell => {
+                cell.addEventListener('click', function() {
+                    const currentValue = this.textContent;
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = currentValue;
+                    input.style.width = '100px';
+                    
+                    // Function to handle value update
+                    const updateValue = async () => {
+                        const newValue = input.value;
+                        const row = cell.parentElement;
+                        const city = row.dataset.city;
+                        const itemIndex = row.dataset.index;
+                        const field = cell.dataset.field;
+                        
+                        // Send update to server
+                        const response = await fetch('/update_prices', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                city: city,
+                                itemIndex: itemIndex,
+                                field: field,
+                                value: newValue
+                            })
+                        });
+                        
+                        const updatedItem = await response.json();
+                        updateRowValues(row, updatedItem);
+                        applyPercentageColors(); // Reapply colors after update
+                    };
+                    
+                    // Handle both blur and enter key
+                    input.addEventListener('blur', updateValue);
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateValue();
+                            input.blur();
+                        }
+                    });
+                    
+                    cell.textContent = '';
+                    cell.appendChild(input);
+                    input.focus();
+                });
+            });
+            
+            function updateRowValues(row, item) {
+                // Update all cells in the row with new calculated values
+                const cells = row.cells;
+                cells[3].textContent = item.buy_price;
+                cells[4].textContent = item.sell_price;
+                cells[6].textContent = item.buy_price_ratio + '%';
+                cells[7].textContent = item.sell_price_ratio + '%';
+                cells[8].textContent = item.flip_margin;
+                cells[10].textContent = item.max_adjustments;
+                cells[11].textContent = item.roi_percent + '%';
+                cells[12].textContent = item.potential_profit;
+                cells[13].textContent = item.total_investment;
+            }
+        });
+    </script>
+</body>
+</html> 
