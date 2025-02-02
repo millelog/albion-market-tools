@@ -12,6 +12,13 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Extract Unique Names",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/extract_unique_names.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
