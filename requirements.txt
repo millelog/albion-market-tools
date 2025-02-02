@@ -1,0 +1,4 @@
+# HTTP requests library for API calls
+requests>=2.31.0
+
+# Core dependencies are minimal since the project mainly uses Python standard library 
