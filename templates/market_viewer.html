@@ -106,6 +106,7 @@
             <thead>
                 <tr>
                     <th>Item Name</th>
+                    <th>Enchant</th>
                     <th>Quality</th>
                     <th class="volume-col">Hist. Vol</th>
                     <th class="price-col">Hist. Avg</th>
@@ -126,6 +127,7 @@
                 {% for item in items %}
                 <tr data-city="{{ city }}" data-item-id="{{ item.item_id }}">
                     <td>{{ item.item_name or item.item_id }}</td>
+                    <td>{{ item.enchant_lvl }}</td>
                     <td>{{ item.quality }}</td>
                     <td class="volume-col">{{ item.avg_item_count | round | int }}</td>
                     <td class="price-col hist-avg" data-value="{{ item.avg_price }}">{{ item.avg_price | round | int }}</td>

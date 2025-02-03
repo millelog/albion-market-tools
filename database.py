@@ -34,11 +34,12 @@ class MarketDatabase:
                     item_id TEXT NOT NULL,
                     item_name TEXT,
                     quality INTEGER NOT NULL,
+                    enchant_lvl INTEGER NOT NULL DEFAULT 0,
                     avg_item_count REAL NOT NULL,
                     avg_price REAL NOT NULL,
                     data_points INTEGER NOT NULL,
                     last_updated TIMESTAMP NOT NULL,
-                    UNIQUE(location, item_id, quality)
+                    UNIQUE(location, item_id, quality, enchant_lvl)
                 )
             """)
             
@@ -58,6 +59,7 @@ class MarketDatabase:
                       'location': str,
                       'item_id': str,
                       'quality': int,
+                      'enchant_lvl': int,
                       'avg_item_count': float,
                       'avg_price': float,
                       'data_points': int
@@ -68,9 +70,9 @@ class MarketDatabase:
                 try:
                     conn.execute("""
                         INSERT INTO history_stats 
-                        (location, item_id, item_name, quality, avg_item_count, avg_price, data_points, last_updated)
-                        VALUES (:location, :item_id, :item_name, :quality, :avg_item_count, :avg_price, :data_points, :last_updated)
-                        ON CONFLICT(location, item_id, quality) DO UPDATE SET
+                        (location, item_id, item_name, quality, enchant_lvl, avg_item_count, avg_price, data_points, last_updated)
+                        VALUES (:location, :item_id, :item_name, :quality, :enchant_lvl, :avg_item_count, :avg_price, :data_points, :last_updated)
+                        ON CONFLICT(location, item_id, quality, enchant_lvl) DO UPDATE SET
                             item_name = :item_name,
                             avg_item_count = :avg_item_count,
                             avg_price = :avg_price,
@@ -92,7 +94,7 @@ class MarketDatabase:
             location: The city/location to query for
             limit: Maximum number of items to return
             min_data_points: Minimum number of data points required (defaults to config value)
-            min_volume: Minimum average daily volume required
+            min_volume: Minimum average daily volume required (will be overridden by minimum threshold of 50)
         
         Returns:
             List of dictionaries containing item statistics, sorted by market activity
@@ -101,16 +103,14 @@ class MarketDatabase:
             min_data_points = DB['min_data_points']
             
         # Build the WHERE clause dynamically based on filters
-        where_clauses = ["location = ?"]
+        where_clauses = ["location = ?", "avg_item_count >= 50"]  # Enforce minimum volume threshold
         params = [location]
-        
+            
         if min_data_points:
             where_clauses.append("data_points >= ?")
             params.append(min_data_points)
             
-        if min_volume:
-            where_clauses.append("avg_item_count >= ?")
-            params.append(min_volume)
+        # Note: min_volume parameter is effectively ignored since we enforce minimum of 50
             
         where_clause = " AND ".join(where_clauses)
             
@@ -121,6 +121,7 @@ class MarketDatabase:
                     item_name,
                     item_id,
                     quality,
+                    enchant_lvl,
                     avg_item_count,
                     avg_price,
                     data_points,

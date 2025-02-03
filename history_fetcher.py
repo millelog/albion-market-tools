@@ -97,11 +97,20 @@ class HistoryFetcher:
             total_price = sum(point['avg_price'] for point in valid_points)
             num_points = len(valid_points)
             
+            # Parse enchantment level from item_id
+            enchant_lvl = 0
+            if '@' in item_id:
+                try:
+                    enchant_lvl = int(item_id.split('@')[1])
+                except (IndexError, ValueError):
+                    logger.warning(f"Failed to parse enchantment level from {item_id}")
+            
             aggregated_stats.append({
                 'location': location,
                 'item_id': item_id,
                 'item_name': self.item_names.get(item_id, ''),
                 'quality': quality,
+                'enchant_lvl': enchant_lvl,
                 'avg_item_count': round(total_count / num_points, 2),
                 'avg_price': round(total_price / num_points, 2),
                 'data_points': num_points
