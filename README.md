@@ -1,166 +1,155 @@
-# Albion Online Market Flipping Tool
+# Albion Online Market Tools
 
-A Python-based tool for analyzing Albion Online market data to identify profitable flip opportunities. The tool fetches current market prices from the Albion Online API, compares these prices against a curated list of popular items (with daily volume estimates), and calculates the potential daily profit for flipping items across various cities.
+A web-based tool for analyzing Albion Online market data to identify profitable flip opportunities. The tool maintains a database of historical market data, analyzes current market prices from the Albion Online API, and presents profitable flipping opportunities through an interactive web interface.
 
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Overview](#overview)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Development & Maintenance](#development--maintenance)
-
----
+![Market Viewer Interface](img/screenshot.png)
 
 ## Features
 
-- **API Integration:** Retrieves market data from Albion Online endpoints using batched API calls to stay within URL length and rate limit constraints.
-- **Flip Opportunity Analysis:** Calculates the profit margin between the best available buy and sell prices for popular items.
-- **Volume-Weighted Profit:** Uses daily volume estimates to prioritize high-traffic items.
-- **Multi-City Support:** Evaluates opportunities across multiple cities (e.g., Fort Sterling, Lymhurst).
-- **Efficient Data Handling:** Batches API queries and uses gzip compression to minimize bandwidth usage.
-- **Sorting Options:** Sort results by either total profit or return on investment (ROI).
+- **Interactive Web Interface:** Real-time market data viewer with editable prices and dynamic updates
+- **Historical Data Analysis:** Tracks and analyzes market history to identify high-volume items
+- **Smart Filtering:** Automatically filters opportunities based on:
+  - Minimum profit threshold (configurable)
+  - Expected daily volume
+  - Market fees and taxes
+- **Multi-City Support:** Analyzes opportunities across all major cities
+- **Real-time Updates:** Update prices directly in the interface and see recalculated profits
+- **Manual Controls:** Delete or filter out opportunities that don't interest you
 
----
+## Architecture
 
-## Overview
+The application consists of several key components:
 
-The Albion Online Market Flipping Tool is designed for players and traders who want to automate the process of identifying profitable items to flip on the market. By comparing API data fields such as `sell_price_min` and `buy_price_max` with daily volume estimates, the tool computes both flip margins and ROI, factoring in market taxes.
+- **Web Interface (`web_viewer.py`):**
+  - Flask-based web server
+  - Real-time market data display
+  - Interactive price updates
+  - Manual item filtering
 
-For example, for each item/city combination:
-- **Flip Margin Calculation:**
-  ```python
-  flip_margin = sell_price - buy_price - buy_order_fee - sell_order_fee
-  ```
-- **ROI Calculation:**
-  ```python
-  roi_percent = (potential_profit / total_investment) * 100
-  ```
-Only opportunities where `flip_margin > 0` are considered.
+- **Market Analysis (`analysis.py`):**
+  - Historical data analysis
+  - Item volume tracking
+  - Market value calculations
 
-The tool uses batching utilities to ensure that each API request URL does not exceed 4096 characters, thereby making efficient use of the API rate limits.
+- **Flip Calculator (`flip_calculator.py`):**
+  - Profit margin calculations
+  - Market fee considerations
+  - Volume-based opportunity filtering
 
----
+- **Database Management (`database.py`):**
+  - SQLite database for historical data
+  - Efficient data querying
+  - Automatic data cleanup
+
+- **API Integration (`api_client.py`):**
+  - Rate-limited API access
+  - Batched requests
+  - Gzip compression support
 
 ## Installation
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/albion-market-flipper.git
-   cd albion-market-flipper
+   git clone https://github.com/yourusername/albion-market-tools.git
+   cd albion-market-tools
    ```
 
-2. **Create a Virtual Environment (Optional but Recommended):**
+2. **Create a Virtual Environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate   # On Windows use: venv\Scripts\activate
    ```
 
 3. **Install Dependencies:**
-   The primary dependency is the `requests` library. Install it via pip:
    ```bash
-   pip install requests
+   pip install -r requirements.txt
    ```
-
----
 
 ## Configuration
 
-### API Configuration
+The application is configured through several files:
 
-- **API Endpoints & Regions:**  
-  The API endpoints and base URLs for different regions (Americas, Europe, Asia) are defined in `config.py`. Update these values if the API endpoints change.
+### `config.py`
+- API endpoints and regions
+- City configurations
+- Database settings
+- Flip calculator parameters:
+  - Minimum profit threshold
+  - Number of items to analyze
+  - Number of opportunities to display
 
-- **Rate Limits & URL Length:**  
-  Rate limit settings and the maximum URL length (4096 characters) are also maintained in `config.py`.
-
-### Popular Items JSON
-
-- **Data Structure:**  
-  Popular items are stored in separate JSON files per city in the `popular_items` directory. Each file should be structured as follows:
-  ```json
-  [
-    {
-      "name": "Adept's Tome of Insight [4.0]",
-      "volume": 70300,
-      "average_price": 17430,
-      "unique_name": "T4_SKILLBOOK_NONTRADABLE"
-    },
-    // ... more items
-  ]
-  ```
-  Adjust the values according to your trading volume estimates and the items you wish to monitor.
-
----
+### Database Setup
+The application automatically creates and manages its SQLite database. The database stores:
+- Historical market data
+- Item volume statistics
+- Price trends
 
 ## Usage
 
-The tool is run via the command line using `main.py`. The following command-line arguments are supported:
+1. **Start the Web Server:**
+   ```bash
+   python main.py
+   ```
+   This will start the web server on `http://localhost:5000`
 
-- `--region`: The API region to query (default is `Americas`). Valid options include `Europe`, `Americas`, or `Asia`.
-- `--sort`: Sort results by either `profit` or `roi` (default is `roi`).
+2. **View Market Opportunities:**
+   - Open your browser to `http://localhost:5000`
+   - View current flip opportunities across all cities
+   - Sort by various metrics (profit, ROI, etc.)
 
-### Example
-
-```bash
-python main.py --region Europe --sort profit
-```
-
-On execution, the tool will:
-1. Load the popular items data for each configured city.
-2. Consolidate a unique list of item identifiers.
-3. Batch API calls to fetch current market prices.
-4. Analyze the fetched data to compute flip opportunities.
-5. Print a sorted list of the best flip opportunities per city, including:
-   - Item name
-   - Flip margin
-   - Expected volume
-   - ROI percentage
-   - Potential daily profit
-   - Required investment
-
----
+3. **Interact with the Interface:**
+   - Click prices to edit them and see recalculated profits
+   - Use the delete button (❌) to remove uninteresting opportunities
+   - Use the refresh buttons to update historical data or current analysis
 
 ## Project Structure
 
 ```
-market_flipper/
-├── __init__.py
-├── main.py              # Entry point for running the tool
-├── config.py            # Contains API endpoints, rate limits, and other configuration constants
-├── api_client.py        # Manages API interactions, URL construction, and batching
-├── data_storage.py      # Handles reading/writing the popular items JSON
-├── analyzer.py          # Contains business logic for calculating flip opportunities
-└── utils.py             # Utility functions (e.g., URL batching)
+albion-market-tools/
+├── web_viewer.py         # Web interface and Flask routes
+├── analysis.py           # Market analysis logic
+├── flip_calculator.py    # Profit calculation engine
+├── database.py          # Database management
+├── api_client.py        # Albion Online API client
+├── history_fetcher.py   # Historical data collection
+├── config.py            # Configuration settings
+├── main.py             # Application entry point
+├── requirements.txt    # Python dependencies
+├── templates/          # HTML templates
+│   └── market_viewer.html  # Main interface template
+├── data/              # Database and cache directory
+└── img/               # Image assets
+    └── screenshot.png  # UI screenshot
 ```
 
-- **main.py:** Orchestrates the overall workflow.
-- **config.py:** Centralizes configuration details.
-- **api_client.py:** Builds API URLs and retrieves data, ensuring each URL stays within limits.
-- **data_storage.py:** Loads and saves the JSON file that contains popular items per city.
-- **analyzer.py:** Processes market data, computes margins, and sorts profitable opportunities.
-- **utils.py:** Contains helper functions like batching the item list for API calls.
+## Development
 
----
+### Key Components
 
-## Development & Maintenance
+- **Web Viewer (`web_viewer.py`):**
+  - Handles all web routes and API endpoints
+  - Manages the current market data state
+  - Processes user interactions
 
-- **Modular Design:**  
-  Each component is designed to be modular and testable. Changes to one module (e.g., API endpoint updates) require minimal modifications to others.
+- **Market Analyzer (`analysis.py`):**
+  - Processes historical market data
+  - Identifies high-volume items
+  - Calculates market statistics
 
-- **Batching & Rate Limiting:**  
-  The `split_into_batches` function in `utils.py` ensures that the API URL length does not exceed the maximum allowed limit. Adjust this logic if API parameters change.
+- **Flip Calculator (`flip_calculator.py`):**
+  - Implements the core profit calculation logic
+  - Applies filtering rules
+  - Handles market fees and taxes
 
-- **Extensibility:**  
-  New features or changes in the API can be managed by updating the corresponding module (e.g., `analyzer.py` for changes in flip calculations).
 
-- **Testing:**  
-  Consider adding unit tests to validate individual components such as URL batching, API client requests, and profit calculations.
+## Contributing
 
-- **Logging:**  
-  Incorporate logging for better traceability of API requests and data processing, especially if running the tool in a production environment.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
