@@ -6,70 +6,140 @@
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
         th { background-color: #f2f2f2; }
-        .editable { background-color: #fff3e0; cursor: pointer; }
         .city-section { margin-bottom: 2em; }
         
-        /* Hover and selection styles */
+        /* Hover styles */
         tr:hover { background-color: #f5f5f5; }
-        tr.selected { background-color: #e3f2fd; }
         
-        /* Delete button style */
-        .delete-btn {
-            color: red;
-            cursor: pointer;
-            text-align: center;
-            font-weight: bold;
-        }
-        .delete-btn:hover {
-            background-color: #ffebee;
-        }
-
         /* Percentage field styles */
         .percentage-cell {
             transition: background-color 0.3s;
         }
+
+        /* Header controls */
+        .header-controls {
+            margin-bottom: 1em;
+            padding: 1em;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .header-controls button {
+            padding: 0.5em 1em;
+            margin-right: 1em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .header-controls button:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Value indicators */
+        .high-value { color: #28a745; }
+        .medium-value { color: #ffc107; }
+        .low-value { color: #dc3545; }
+
+        /* Column width adjustments */
+        .volume-col { width: 80px; }
+        .price-col { width: 100px; }
+        .trading-value-col { width: 120px; }
+        
+        /* Percentage comparison styles */
+        .price-percent {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .price-percent.higher { color: #28a745; }
+        .price-percent.lower { color: #dc3545; }
+
+        /* Loading indicator */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Editable cell styles */
+        .editable {
+            background-color: #fff;
+            cursor: text;
+            transition: background-color 0.2s;
+        }
+        
+        .editable:hover {
+            background-color: #e8f0fe;
+        }
+        
+        .editable:focus {
+            background-color: #e8f0fe;
+            outline: 2px solid #4285f4;
+            outline-offset: -2px;
+        }
+
+        /* Delete button styles */
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 14px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .delete-btn:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <div class="header-controls">
+        <button onclick="refreshHistory()">Refresh Historical Data</button>
+        <button onclick="refreshAnalysis()">Refresh Market Analysis</button>
+    </div>
+
     {% for city, items in data.items() %}
     <div class="city-section">
         <h2>{{ city }}</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Delete</th>
                     <th>Item Name</th>
                     <th>Quality</th>
-                    <th>Buy@</th>
-                    <th>Sell@</th>
-                    <th>Avg@</th>
-                    <th>B/Avg%</th>
-                    <th>S/Avg%</th>
-                    <th>Margin</th>
-                    <th>Volume</th>
-                    <th>Max Adj</th>
+                    <th class="volume-col">Hist. Vol</th>
+                    <th class="price-col">Hist. Avg</th>
+                    <th class="trading-value-col">Trading Val</th>
+                    <th class="price-col">Current Buy</th>
+                    <th>Buy % / Avg</th>
+                    <th class="price-col">Current Sell</th>
+                    <th>Sell % / Avg</th>
+                    <th>Flip Margin</th>
+                    <th class="volume-col">Exp. Vol</th>
                     <th>ROI %</th>
-                    <th>Profit/day</th>
-                    <th>Investment</th>
+                    <th>Pot. Profit</th>
+                    <th>Req. Invest</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in items %}
-                <tr data-city="{{ city }}" data-index="{{ loop.index0 }}">
-                    <td class="delete-btn">×</td>
-                    <td>{{ item.name }}</td>
+                <tr data-city="{{ city }}" data-item-id="{{ item.item_id }}">
+                    <td>{{ item.item_name or item.item_id }}</td>
                     <td>{{ item.quality }}</td>
-                    <td class="editable" data-field="buy_price">{{ item.buy_price }}</td>
-                    <td class="editable" data-field="sell_price">{{ item.sell_price }}</td>
-                    <td>{{ item.average_price }}</td>
-                    <td class="percentage-cell">{{ item.buy_price_ratio }}%</td>
-                    <td class="percentage-cell">{{ item.sell_price_ratio }}%</td>
-                    <td>{{ item.flip_margin }}</td>
-                    <td>{{ item.expected_volume }}</td>
-                    <td>{{ item.max_adjustments }}</td>
-                    <td class="percentage-cell">{{ item.roi_percent }}%</td>
-                    <td>{{ item.potential_profit }}</td>
-                    <td>{{ item.total_investment }}</td>
+                    <td class="volume-col">{{ item.avg_item_count | round | int }}</td>
+                    <td class="price-col hist-avg" data-value="{{ item.avg_price }}">{{ item.avg_price | round | int }}</td>
+                    <td class="trading-value trading-value-col" data-value="{{ item.market_value }}">{{ item.market_value | round | int }}</td>
+                    <td class="editable price-col" data-field="buy_price" contenteditable="true">{{ item.buy_price }}</td>
+                    <td class="price-percent buy-percent"></td>
+                    <td class="editable price-col" data-field="sell_price" contenteditable="true">{{ item.sell_price }}</td>
+                    <td class="price-percent sell-percent"></td>
+                    <td class="flip-margin">{{ item.flip_margin }}</td>
+                    <td class="volume-col expected-volume">{{ item.expected_volume }}</td>
+                    <td class="percentage-cell roi-percent">{{ item.roi_percent }}%</td>
+                    <td class="potential-profit">{{ item.potential_profit }}</td>
+                    <td class="total-investment">{{ item.total_investment }}</td>
+                    <td><button class="delete-btn" onclick="deleteItem(this)">❌</button></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -78,148 +148,232 @@
     {% endfor %}
 
     <script>
-        function getColorForPercentage(percent, type) {
-            let normalized;
-            
-            if (type === 'buy') {
-                // For buy ratio, negative is good (below average price)
-                if (percent <= 0) {
-                    // 0 to -100: white to green
-                    normalized = Math.min(-percent, 100) / 100;
-                    return `rgba(${255 * (1 - normalized)}, 255, ${255 * (1 - normalized)}, 0.2)`;
-                } else {
-                    // 0 to 100: white to red
-                    normalized = Math.min(percent, 100) / 100;
-                    return `rgba(255, ${255 * (1 - normalized)}, ${255 * (1 - normalized)}, 0.2)`;
-                }
+        function getColorForPercentage(percent) {
+            let normalized = Math.min(Math.abs(percent), 100) / 100;
+            if (percent >= 0) {
+                // 0 to 100: white to green
+                return `rgba(${255 * (1 - normalized)}, 255, ${255 * (1 - normalized)}, 0.2)`;
             } else {
-                // For sell ratio and ROI
-                if (percent >= 0) {
-                    // 0 to 100: white to green
-                    normalized = Math.min(percent, 100) / 100;
-                    return `rgba(${255 * (1 - normalized)}, 255, ${255 * (1 - normalized)}, 0.2)`;
-                } else {
-                    // 0 to -100: white to red
-                    normalized = Math.min(-percent, 100) / 100;
-                    return `rgba(255, ${255 * (1 - normalized)}, ${255 * (1 - normalized)}, 0.2)`;
-                }
+                // 0 to -100: white to red
+                return `rgba(255, ${255 * (1 - normalized)}, ${255 * (1 - normalized)}, 0.2)`;
             }
         }
 
+        // Add number formatting function
+        function formatNumber(num) {
+            return new Intl.NumberFormat('en-US').format(Math.round(num));
+        }
+
+        // Calculate price percentage difference
+        function calculatePricePercentage(current, avg) {
+            const diff = ((current - avg) / avg) * 100;
+            const formattedDiff = diff.toFixed(1);
+            const className = diff >= 0 ? 'higher' : 'lower';
+            return { text: `${formattedDiff}%`, className };
+        }
+
+        // Update percentage cells for a row
+        function updatePricePercentages(row) {
+            const avgPrice = parseFloat(row.querySelector('.hist-avg').dataset.value);
+            const buyPrice = parseFloat(row.querySelector('[data-field="buy_price"]').textContent);
+            const sellPrice = parseFloat(row.querySelector('[data-field="sell_price"]').textContent);
+
+            const buyPercent = calculatePricePercentage(buyPrice, avgPrice);
+            const sellPercent = calculatePricePercentage(sellPrice, avgPrice);
+
+            const buyPercentCell = row.querySelector('.buy-percent');
+            const sellPercentCell = row.querySelector('.sell-percent');
+
+            buyPercentCell.textContent = buyPercent.text;
+            sellPercentCell.textContent = sellPercent.text;
+            buyPercentCell.className = `price-percent buy-percent ${buyPercent.className}`;
+            sellPercentCell.className = `price-percent sell-percent ${sellPercent.className}`;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const editableCells = document.querySelectorAll('.editable');
-            const rows = document.querySelectorAll('tr[data-city]');
+            const tables = document.querySelectorAll('table');
             
-            // Initial color application
+            // Add event listeners for editable cells
+            document.querySelectorAll('.editable').forEach(cell => {
+                cell.addEventListener('blur', handlePriceUpdate);
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        cell.blur();
+                    }
+                });
+            });
+
+            // Handle price updates
+            async function handlePriceUpdate(event) {
+                const cell = event.target;
+                const row = cell.closest('tr');
+                const city = row.dataset.city;
+                const itemId = row.dataset.itemId;
+                const field = cell.dataset.field;
+                const value = parseInt(cell.textContent.trim());
+
+                // Validate input
+                if (isNaN(value) || value < 0) {
+                    alert('Please enter a valid positive number');
+                    cell.textContent = cell.dataset.originalValue || '0';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/update_prices', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            city: city,
+                            itemIndex: Array.from(row.parentNode.children).indexOf(row),
+                            field: field,
+                            value: value
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.status === 'filtered') {
+                        // Item was filtered out, remove the row
+                        row.remove();
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to update prices');
+                    }
+
+                    updateRowValues(row, data);
+                } catch (error) {
+                    console.error('Error updating prices:', error);
+                    alert(error.message || 'Failed to update prices. Please try again.');
+                }
+            }
+
+            // Update row values after price change
+            function updateRowValues(row, item) {
+                row.querySelector('.flip-margin').textContent = formatNumber(item.flip_margin);
+                row.querySelector('.expected-volume').textContent = formatNumber(item.expected_volume);
+                row.querySelector('.roi-percent').textContent = item.roi_percent.toFixed(1) + '%';
+                row.querySelector('.potential-profit').textContent = formatNumber(item.potential_profit);
+                row.querySelector('.total-investment').textContent = formatNumber(item.total_investment);
+                
+                // Update price percentages
+                updatePricePercentages(row);
+                
+                // Reapply percentage colors
+                applyPercentageColors();
+            }
+
+            // Apply colors to percentage cells
             function applyPercentageColors() {
-                rows.forEach(row => {
-                    // B/Avg%
-                    const buyAvgCell = row.cells[6];
-                    const buyAvgPercent = parseFloat(buyAvgCell.textContent);
-                    buyAvgCell.style.backgroundColor = getColorForPercentage(buyAvgPercent, 'buy');
-                    
-                    // S/Avg%
-                    const sellAvgCell = row.cells[7];
-                    const sellAvgPercent = parseFloat(sellAvgCell.textContent);
-                    sellAvgCell.style.backgroundColor = getColorForPercentage(sellAvgPercent, 'sell');
-                    
-                    // ROI%
-                    const roiCell = row.cells[11];
-                    const roiPercent = parseFloat(roiCell.textContent);
-                    roiCell.style.backgroundColor = getColorForPercentage(roiPercent, 'roi');
+                document.querySelectorAll('.percentage-cell').forEach(cell => {
+                    const percent = parseFloat(cell.textContent);
+                    cell.style.backgroundColor = getColorForPercentage(percent);
                 });
             }
             
             applyPercentageColors();
-            
-            // Row selection handling
-            rows.forEach(row => {
-                row.addEventListener('click', function(e) {
-                    // Don't select row if clicking on editable cell or delete button
-                    if (!e.target.classList.contains('editable') && 
-                        !e.target.classList.contains('delete-btn')) {
-                        // Remove selection from all rows
-                        rows.forEach(r => r.classList.remove('selected'));
-                        // Add selection to clicked row
-                        row.classList.add('selected');
-                    }
-                });
+
+            // Add value indicators to trading value cells
+            document.querySelectorAll('.trading-value').forEach(cell => {
+                const value = parseFloat(cell.textContent);
+                if (value > 1000000) {
+                    cell.classList.add('high-value');
+                } else if (value > 500000) {
+                    cell.classList.add('medium-value');
+                } else {
+                    cell.classList.add('low-value');
+                }
             });
-            
-            // Delete button handling
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const row = this.parentElement;
-                    row.remove();
-                });
+
+            // Format all numbers initially
+            document.querySelectorAll('td:not(.editable)').forEach(cell => {
+                const value = cell.textContent.trim();
+                if (!isNaN(value) && value !== '') {
+                    cell.textContent = formatNumber(parseFloat(value));
+                }
             });
-            
-            // Editable cells handling
-            editableCells.forEach(cell => {
-                cell.addEventListener('click', function() {
-                    const currentValue = this.textContent;
-                    const input = document.createElement('input');
-                    input.type = 'number';
-                    input.value = currentValue;
-                    input.style.width = '100px';
-                    
-                    // Function to handle value update
-                    const updateValue = async () => {
-                        const newValue = input.value;
-                        const row = cell.parentElement;
-                        const city = row.dataset.city;
-                        const itemIndex = row.dataset.index;
-                        const field = cell.dataset.field;
-                        
-                        // Send update to server
-                        const response = await fetch('/update_prices', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                city: city,
-                                itemIndex: itemIndex,
-                                field: field,
-                                value: newValue
-                            })
-                        });
-                        
-                        const updatedItem = await response.json();
-                        updateRowValues(row, updatedItem);
-                        applyPercentageColors(); // Reapply colors after update
-                    };
-                    
-                    // Handle both blur and enter key
-                    input.addEventListener('blur', updateValue);
-                    input.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            updateValue();
-                            input.blur();
-                        }
-                    });
-                    
-                    cell.textContent = '';
-                    cell.appendChild(input);
-                    input.focus();
-                });
+
+            // Calculate initial percentages
+            document.querySelectorAll('tr[data-city]').forEach(row => {
+                updatePricePercentages(row);
             });
-            
-            function updateRowValues(row, item) {
-                // Update all cells in the row with new calculated values
-                const cells = row.cells;
-                cells[3].textContent = item.buy_price;
-                cells[4].textContent = item.sell_price;
-                cells[6].textContent = item.buy_price_ratio + '%';
-                cells[7].textContent = item.sell_price_ratio + '%';
-                cells[8].textContent = item.flip_margin;
-                cells[10].textContent = item.max_adjustments;
-                cells[11].textContent = item.roi_percent + '%';
-                cells[12].textContent = item.potential_profit;
-                cells[13].textContent = item.total_investment;
-            }
         });
+
+        async function refreshHistory() {
+            try {
+                document.body.classList.add('loading');
+                const response = await fetch('/refresh-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error('Failed to refresh history');
+                
+                // Reload the page to show updated data
+                window.location.reload();
+            } catch (error) {
+                console.error('Error refreshing history:', error);
+                alert('Failed to refresh historical data. Please try again.');
+            } finally {
+                document.body.classList.remove('loading');
+            }
+        }
+
+        async function refreshAnalysis() {
+            try {
+                document.body.classList.add('loading');
+                const response = await fetch('/market-stats', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error('Failed to refresh analysis');
+                
+                // Reload the page to show updated data
+                window.location.reload();
+            } catch (error) {
+                console.error('Error refreshing analysis:', error);
+                alert('Failed to refresh market analysis. Please try again.');
+            } finally {
+                document.body.classList.remove('loading');
+            }
+        }
+
+        // Add delete functionality
+        async function deleteItem(button) {
+            const row = button.closest('tr');
+            const city = row.dataset.city;
+            const itemIndex = Array.from(row.parentNode.children).indexOf(row);
+
+            try {
+                const response = await fetch('/delete_item', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        city: city,
+                        itemIndex: itemIndex
+                    })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Failed to delete item');
+                }
+
+                // Remove the row from the table
+                row.remove();
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                alert('Failed to delete item. Please try again.');
+            }
+        }
     </script>
 </body>
 </html> 

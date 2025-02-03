@@ -5,11 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Get Flipping Opportunities",
+            "name": "Start Web Viewer",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
-            "args": ["--web"],
             "console": "integratedTerminal"
         },
         {
