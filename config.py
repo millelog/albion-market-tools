@@ -50,6 +50,6 @@ STORAGE = {
 # Flip calculator configuration
 FLIP_CONFIG = {
     'min_profit_threshold': 100000,  # Minimum potential profit to be considered an opportunity
-    'items_to_analyze': 500,  # Number of top items to analyze per location
+    'items_to_analyze': 1000,  # Number of top items to analyze per location
     'opportunities_to_show': 50,  # Number of top opportunities to display per location
 }

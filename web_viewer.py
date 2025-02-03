@@ -180,7 +180,8 @@ def update_prices():
             current_data={
                 'buy_price_max': item['buy_price'],
                 'sell_price_min': item['sell_price'],
-                'sell_price_min_date': item.get('timestamp')
+                'sell_price_min_date': item.get('timestamp'),
+                'avg_price': item.get('avg_price', 0)  # Include historical average price
             },
             historical_volume=item.get('avg_item_count', 0),
             quality=item.get('quality', 1)

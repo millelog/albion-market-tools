@@ -68,6 +68,19 @@ class FlipCalculator:
             if not all([buy_price, sell_price]):
                 return None
                 
+            # Get historical average price from the item data
+            historical_avg = current_data.get('avg_price', 0)
+            if not historical_avg:
+                return None
+                
+            # Calculate price deviations as percentages
+            buy_price_deviation = ((buy_price - historical_avg) / historical_avg) * 100
+            sell_price_deviation = ((sell_price - historical_avg) / historical_avg) * 100
+            
+            # Filter out items with extreme price deviations
+            if buy_price_deviation < -90 or sell_price_deviation > 400:
+                return None
+                
             # Calculate expected volume based on historical data
             expected_volume = round(historical_volume * VOLUME_CAPTURE)
             
@@ -116,7 +129,9 @@ class FlipCalculator:
                 'potential_profit': potential_profit,
                 'total_investment': total_investment,
                 'roi_percent': roi_percent,
-                'timestamp': current_data.get('sell_price_min_date')
+                'timestamp': current_data.get('sell_price_min_date'),
+                'buy_price_deviation': round(buy_price_deviation, 1),
+                'sell_price_deviation': round(sell_price_deviation, 1)
             }
             
         except Exception as e:
@@ -162,6 +177,9 @@ class FlipCalculator:
             current = current_lookup.get((item_id, quality))
             if not current:
                 continue
+                
+            # Add historical average price to current data
+            current['avg_price'] = item.get('avg_price', 0)
                 
             # Calculate flip metrics
             metrics = self.calculate_flip_metrics(
